@@ -17,16 +17,24 @@ namespace WindowsFormsApplication2
     {
         string account;
         string pwd;
-        string PassCode;
+        string promoCode;
         int stage;
+        bool promoCodeIsAlreadyUsed;
+
         public Form()
         {
             InitializeComponent();
-            //webBrowser.Navigate("https://www.microsoftazurepass.com/");
+
+            //Disable Script Errors in WebBrowser Control
+            webBrowser.ScriptErrorsSuppressed = true;
+
             webBrowser.Navigate("https://account.windowsazure.com/Subscriptions");
+
+            //excel control
             string line = null;
             int line_number = 1;
             int line_to_delete = 2;
+            promoCodeIsAlreadyUsed = false;
 
             using (StreamReader reader = new StreamReader("outlook.csv"))
             {
@@ -68,7 +76,7 @@ namespace WindowsFormsApplication2
                         //assign 2nd index of array to password
                         pwd = words[2];
 
-                        PassCode = words[4];
+                        promoCode = words[4];
 
                         readNextRow(line, line_number, line_to_delete, reader, file, writer);
                     }
@@ -101,12 +109,7 @@ namespace WindowsFormsApplication2
             stage = 0;
             Debug.WriteLine("stage:"+stage);
         }
-
-        public async Task<string> WaitAsynchronouslyAsync()
-        {
-            await Task.Delay(13000);
-            return "Finished";
-        }
+        
         public async Task<string> WaitFor(int n)
         {
             Debug.WriteLine("wait");
@@ -118,145 +121,150 @@ namespace WindowsFormsApplication2
         {
             string currentUrl = webBrowser.Url.ToString();
             Debug.WriteLine("current url : " + currentUrl);
+            url.Text = currentUrl;
+
+            // 1. Login page
             if(currentUrl.StartsWith("https://login.live.com/login.srf?"))
             {
+                Debug.WriteLine("1. Login page");
+                infoText.Text = account;
+
                 stage++;
                 Debug.WriteLine("stage:"+stage);
                 if(stage == 3)
                 {
-                    accountText.Text = account;
+                    infoText.Text = account;
                     SendKeys.SendWait(account);
                     SendKeys.SendWait("{TAB}");
                     SendKeys.SendWait(pwd);
                     SendKeys.SendWait("{ENTER}");
                 }
             }
+
+            // 2. Azure subscription page
             else if(currentUrl == "https://account.windowsazure.com/Subscriptions")
             {
-                stage++;
-                Debug.WriteLine("stage:" + stage);
-                if (stage == 6)
-                {
-                    webBrowser.Navigate("https://account.windowsazure.com/signup?offer=MS-AZR-0044P");
-                }
-            }
-            else if (currentUrl == "https://account.windowsazure.com/signup?offer=MS-AZR-0044P")
-            {
-                stage++;
-                Debug.WriteLine("stage:" + stage);
-                if (stage == 14)
-                {
+                Debug.WriteLine("2. Azure subscription page");
 
-                   webBrowser.Navigate("https://account.windowsazure.com/signup?offer=MS-AZR-0124P");
-                    
+                HtmlElement subscriptionList = webBrowser.Document.GetElementById("subscriptions-list");
+                if (subscriptionList != null)
+                {
+                    Debug.WriteLine("azure pass already exist.");
+                    infoText.Text = account + ": azure pass already exist.";
+                    Debug.WriteLine("exit");
+                    Application.Restart();
+                }
+                else
+                {
+                    stage++;
+                    Debug.WriteLine("stage:" + stage);
+
+                    infoText.Text = account + ": register azure pass";
+                    webBrowser.Navigate("https://www.microsoftazurepass.com/");
                 }
             }
-            else if(currentUrl == "https://account.windowsazure.com/signup?offer=MS-AZR-0124P")
+
+            // 3. Azure Pass home page
+            else if (currentUrl == "https://www.microsoftazurepass.com/")
             {
-                stage++;
-                Debug.WriteLine("stage:" + stage);
-                if(stage == 20)
+                Debug.WriteLine("3. Azure Pass home page");
+
+                if (!promoCodeIsAlreadyUsed)
                 {
-                    Debug.WriteLine("Wait!");
-                    string result = await WaitAsynchronouslyAsync();
-                    Debug.WriteLine("start");
-                    HtmlElement fillElement = webBrowser.Document.GetElementById("CustomerInfo_TaxId");
-                    fillElement.SetAttribute("value", "00000000");
+                    promoCodeIsAlreadyUsed = true;
+                    infoText.Text = account;
+
+                    HtmlElement fillElement = webBrowser.Document.GetElementById("ddlCountry");
+                    fillElement.SetAttribute("value", "830974e9-147b-e011-8167-001f29c6fb82");
+
+                    fillElement = webBrowser.Document.GetElementById("tbPromo");
+                    fillElement.SetAttribute("value", promoCode);
                     fillElement.Focus();
-                    SendKeys.SendWait("{TAB}");
                     SendKeys.SendWait("{ENTER}");
-
-                    WaitFor(1000);
-
-                    fillElement = webBrowser.Document.GetElementById("phone-no-countrySelector");
-                    fillElement.Focus();
-                    SendKeys.SendWait("{TAB}");
-                    SendKeys.SendWait("912345678");
-                    SendKeys.SendWait("{TAB}");
-                    SendKeys.SendWait("{ENTER}");
-
-                    WaitFor(15000);
-
-                    fillElement = webBrowser.Document.GetElementById("checkbox-rateplan");
-                    fillElement.Focus();
-                    SendKeys.SendWait(" ");
-                    SendKeys.SendWait("{TAB}");
-                    SendKeys.SendWait("{TAB}");
-                    SendKeys.SendWait("{TAB}");
-                    SendKeys.SendWait("{TAB}");
-                    SendKeys.SendWait("{TAB}");
-                    //SendKeys.SendWait("{ENTER}");
+                }
+                else
+                {
+                    Debug.WriteLine("Promo code is already used.");
+                    infoText.Text = account + ": Promo code is already used";
                 }
             }
-            /*
-            if (currentUrl == "https://www.microsoftazurepass.com/")
-            {
-                HtmlElement fillElement = webBrowser.Document.GetElementById("ddlCountry");
-                fillElement.SetAttribute("value", "830974e9-147b-e011-8167-001f29c6fb82");
 
-                fillElement = webBrowser.Document.GetElementById("tbPromo");
-                fillElement.SetAttribute("value", PassCode);
-                fillElement.Focus();
-                SendKeys.SendWait("{ENTER}");
-            }
+            // 4. login bottom
             else if (currentUrl == "https://www.microsoftazurepass.com/AAD?returnUrl=%2FRegistration&isAccountExisted=False")
             {
+                Debug.WriteLine("4. login bottom");
+
                 HtmlElement fillElement = webBrowser.Document.GetElementById("loginLink");
                 fillElement.Focus();
                 SendKeys.SendWait("{ENTER}");
             }
-            
-            else if (currentUrl.StartsWith("https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47") && !(currentUrl.EndsWith("#")))
+            // Azure pass already exist
+            else if (currentUrl == "https://www.microsoftazurepass.com/Registration/AzureAccountExist")
             {
-                HtmlElement fillElement = webBrowser.Document.GetElementById("use_another_account");
-                fillElement.Focus();
-                SendKeys.SendWait("{ENTER}");
+                Debug.WriteLine("Azure pass already exist");
+                infoText.Text = account + ": Azure pass already exist";
+                //go to info form page
+                webBrowser.Navigate("https://account.windowsazure.com/signup?offer=MS-AZR-0124P");
             }
-            else if (currentUrl.StartsWith("https://login.microsoftonline.com/") && currentUrl.EndsWith("#"))
-            {
-                accountText.Text = account;
-                Debug.WriteLine("account:" + account);
-                HtmlElement fillElement = webBrowser.Document.GetElementById("cred_userid_inputtext");
-                fillElement.Focus();
-                SendKeys.SendWait(account);
-                SendKeys.SendWait("{TAB}");
-                
-            }
-            else if (currentUrl.StartsWith("https://login.live.com/"))
-            {
-                Debug.WriteLine("outlook login");
-                accountText.Text = pwd;
-                Debug.WriteLine("password");
-                SendKeys.Send(pwd);
-                
-            }
+
+            // 5. Authentication
             else if (currentUrl == "https://www.microsoftazurepass.com/Registration?authType=AAD")
             {
+                Debug.WriteLine("5. Authentication");
+                infoText.Text = account + " : Authentication";
+
                 HtmlElement submit = webBrowser.Document.GetElementById("LastName");
                 submit.Focus();
                 SendKeys.SendWait("{TAB}");
                 SendKeys.SendWait("{TAB}");
                 SendKeys.SendWait("{ENTER}");
-            }
-            else if(currentUrl == "https://www.microsoftazurepass.com/Message")
-            {
-                webBrowser.Navigate("https://account.windowsazure.com/");
-            }
-            else if(currentUrl == "https://account.windowsazure.com/signup?offer=ms-azr-0124p")
-            {
-                
-                    HtmlElement fillElement = webBrowser.Document.GetElementById("CustomerInfo_TaxId");
-                    fillElement.SetAttribute("value", "00000000");
-                    fillElement.Focus();
-                    SendKeys.SendWait("{TAB}");
-                    SendKeys.SendWait("{ENTER}");
+                infoText.Text = account + " : Authentication click";
 
-                    fillElement = webBrowser.Document.GetElementById("phone-no-hint");
-                    fillElement.SetAttribute("value", "912345678");
-                    SendKeys.SendWait("{TAB}");
-                    SendKeys.SendWait("{ENTER}");
+            }
 
-                    fillElement = webBrowser.Document.GetElementById("checkbox-rateplan");
+            // Go to info form page
+            else if (currentUrl == "https://account.windowsazure.com/signup?offer=MS-AZR-0044P")
+            {
+                webBrowser.Navigate("https://account.windowsazure.com/signup?offer=MS-AZR-0124P");
+            }
+            else if (currentUrl == "https://www.microsoftazurepass.com/Message")
+            {
+                webBrowser.Navigate("https://account.windowsazure.com/signup?offer=MS-AZR-0124P");
+            }
+
+            // 6. Fill in the info form
+            else if (currentUrl == "https://account.windowsazure.com/signup?offer=MS-AZR-0124P")
+            {
+                stage++;
+                Debug.WriteLine("stage:" + stage);
+                infoText.Text = account + ": Filling in info";
+
+                if (stage == 15)
+                {
+                    string result = await WaitFor(13500);
+
+                        infoText.Text = account + ": Tax";
+                        HtmlElement fillElement = webBrowser.Document.GetElementById("CustomerInfo_TaxId");
+                        fillElement.SetAttribute("value", "00000000");
+                        fillElement.Focus();
+                        SendKeys.SendWait("{TAB}");
+                        SendKeys.SendWait("{ENTER}");
+
+                        result = await WaitFor(1000);
+
+                        infoText.Text = account + ": Phone";
+                        fillElement = webBrowser.Document.GetElementById("phone-no-countrySelector");
+                        fillElement.Focus();
+                        SendKeys.SendWait("{TAB}");
+                        SendKeys.SendWait("912345678");
+                        SendKeys.SendWait("{TAB}");
+                        SendKeys.SendWait("{ENTER}");
+
+                        result = await WaitFor(15000);
+
+                    infoText.Text = account + " : Check agreement";
+                    HtmlElement check = webBrowser.Document.GetElementById("checkbox-rateplan");
+                    check.Focus();
                     SendKeys.SendWait(" ");
                     SendKeys.SendWait("{TAB}");
                     SendKeys.SendWait("{TAB}");
@@ -264,17 +272,59 @@ namespace WindowsFormsApplication2
                     SendKeys.SendWait("{TAB}");
                     SendKeys.SendWait("{TAB}");
                     SendKeys.SendWait("{ENTER}");
-                
+                }
             }
+
+            // 7. Success
+            else if (currentUrl.StartsWith("https://account.windowsazure.com/signuplanding/"))
+            {
+                infoText.Text = account + " : Success!";
+                stage++;
+                Debug.WriteLine("stage:" + stage);
+                if(stage == 19)
+                {
+                    Debug.WriteLine("exit");
+                    Application.Restart();
+                }
+            }
+            // 8. Exit
+            else if(currentUrl.StartsWith("https://www.google.com/"))
+            {
+                Debug.WriteLine("exit");
+                Application.Restart();
+            }
+
+            //Other situation
             else
             {
-
-            } */
+                Debug.WriteLine("Not in the situation");
+                infoText.Text = account + ": Not in the situation";
+            }
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
 
+        }
+
+        private void refresh_Click(object sender, EventArgs e)
+        {
+            webBrowser.Refresh();
+        }
+
+        private void url_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void url_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void GoButtom_Click(object sender, EventArgs e)
+        {
+            webBrowser.Navigate(url.Text);
         }
     }
 }
