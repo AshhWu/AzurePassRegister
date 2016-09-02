@@ -43,7 +43,7 @@
             this.webBrowser.Location = new System.Drawing.Point(0, 53);
             this.webBrowser.MinimumSize = new System.Drawing.Size(20, 20);
             this.webBrowser.Name = "webBrowser";
-            this.webBrowser.Size = new System.Drawing.Size(1057, 692);
+            this.webBrowser.Size = new System.Drawing.Size(1057, 684);
             this.webBrowser.TabIndex = 0;
             this.webBrowser.DocumentCompleted += new System.Windows.Forms.WebBrowserDocumentCompletedEventHandler(this.webBrowser_DocumentCompleted);
             // 
@@ -101,7 +101,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1057, 741);
+            this.ClientSize = new System.Drawing.Size(1057, 733);
             this.Controls.Add(this.GoButtom);
             this.Controls.Add(this.refreshButtom);
             this.Controls.Add(this.infoText);

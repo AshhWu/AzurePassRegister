@@ -150,7 +150,7 @@ namespace WindowsFormsApplication2
                 if (subscriptionList != null)
                 {
                     Debug.WriteLine("azure pass already exist.");
-                    infoText.Text = account + ": azure pass already exist.";
+                    infoText.Text = account + " : azure pass already exist.";
                     Debug.WriteLine("exit");
                     Application.Restart();
                 }
@@ -159,7 +159,7 @@ namespace WindowsFormsApplication2
                     stage++;
                     Debug.WriteLine("stage:" + stage);
 
-                    infoText.Text = account + ": register azure pass";
+                    infoText.Text = account + " : register azure pass";
                     webBrowser.Navigate("https://www.microsoftazurepass.com/");
                 }
             }
@@ -185,7 +185,7 @@ namespace WindowsFormsApplication2
                 else
                 {
                     Debug.WriteLine("Promo code is already used.");
-                    infoText.Text = account + ": Promo code is already used";
+                    infoText.Text = account + " : Promo code is already used";
                 }
             }
 
@@ -202,7 +202,7 @@ namespace WindowsFormsApplication2
             else if (currentUrl == "https://www.microsoftazurepass.com/Registration/AzureAccountExist")
             {
                 Debug.WriteLine("Azure pass already exist");
-                infoText.Text = account + ": Azure pass already exist";
+                infoText.Text = account + " : Azure pass already exist";
                 //go to info form page
                 webBrowser.Navigate("https://account.windowsazure.com/signup?offer=MS-AZR-0124P");
             }
@@ -237,7 +237,7 @@ namespace WindowsFormsApplication2
             {
                 stage++;
                 Debug.WriteLine("stage:" + stage);
-                infoText.Text = account + ": Filling in info";
+                infoText.Text = account + " : Filling in info";
 
                 if (stage == 15)
                 {
@@ -252,7 +252,7 @@ namespace WindowsFormsApplication2
 
                         result = await WaitFor(1000);
 
-                        infoText.Text = account + ": Phone";
+                        infoText.Text = account + " : Phone";
                         fillElement = webBrowser.Document.GetElementById("phone-no-countrySelector");
                         fillElement.Focus();
                         SendKeys.SendWait("{TAB}");
@@ -298,7 +298,7 @@ namespace WindowsFormsApplication2
             else
             {
                 Debug.WriteLine("Not in the situation");
-                infoText.Text = account + ": Not in the situation";
+                infoText.Text = account + " : Not in the situation";
             }
         }
 
